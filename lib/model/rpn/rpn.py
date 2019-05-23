@@ -19,6 +19,7 @@ class _RPN(nn.Module):
     def __init__(self, din):
         super(_RPN, self).__init__()
         
+        # 表示输入的特征图谱的深度
         self.din = din  # get depth of input feature map, e.g., 512
         self.anchor_scales = cfg.ANCHOR_SCALES
         self.anchor_ratios = cfg.ANCHOR_RATIOS
