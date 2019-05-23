@@ -21,18 +21,23 @@ class _RPN(nn.Module):
         
         # 表示输入的特征图谱的深度
         self.din = din  # get depth of input feature map, e.g., 512
+        # anchor的尺寸
         self.anchor_scales = cfg.ANCHOR_SCALES
         self.anchor_ratios = cfg.ANCHOR_RATIOS
         self.feat_stride = cfg.FEAT_STRIDE[0]
 
         # define the convrelu layers processing input feature map
+        # kernel size == (3, 3), stride = 1, padding = 1
         self.RPN_Conv = nn.Conv2d(self.din, 512, 3, 1, 1, bias=True)
 
         # define bg/fg classifcation score layer
+        # nc_score_out = 9 * 2 (ps: anchor_number * bg/fg)
         self.nc_score_out = len(self.anchor_scales) * len(self.anchor_ratios) * 2 # 2(bg/fg) * 9 (anchors)
+        # 输出尺寸不变, 深度变为 2 * 9 , 对应9个anchor box 前后景的概率
         self.RPN_cls_score = nn.Conv2d(512, self.nc_score_out, 1, 1, 0)
 
         # define anchor box offset prediction layer
+        # 定义 anchor_box 的坐标偏移量预测层
         self.nc_bbox_out = len(self.anchor_scales) * len(self.anchor_ratios) * 4 # 4(coords) * 9 (anchors)
         self.RPN_bbox_pred = nn.Conv2d(512, self.nc_bbox_out, 1, 1, 0)
 
@@ -40,6 +45,7 @@ class _RPN(nn.Module):
         self.RPN_proposal = _ProposalLayer(self.feat_stride, self.anchor_scales, self.anchor_ratios)
 
         # define anchor target layer
+        # 定义 anchor 匹配层 (将anchor与gt_box匹配)
         self.RPN_anchor_target = _AnchorTargetLayer(self.feat_stride, self.anchor_scales, self.anchor_ratios)
 
         self.rpn_loss_cls = 0
@@ -47,6 +53,7 @@ class _RPN(nn.Module):
 
     @staticmethod
     def reshape(x, d):
+        '''resize the tensor'''
         input_shape = x.size()
         x = x.view(
             input_shape[0],
@@ -61,6 +68,7 @@ class _RPN(nn.Module):
         batch_size = base_feat.size(0)
 
         # return feature map after convrelu layer
+        # 首先得到经过RPN网络第一层卷积的特征图谱
         rpn_conv1 = F.relu(self.RPN_Conv(base_feat), inplace=True)
         # get rpn classification score
         rpn_cls_score = self.RPN_cls_score(rpn_conv1)
